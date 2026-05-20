@@ -237,20 +237,20 @@ async function startVideoCall() {
 
 ```javascript
 @PostMapping(value = "/token")
-    public ResponseEntity<Map<String, String>> createToken(@RequestBody Map<String, String> params) {
-        String roomName = params.get("roomName");
-        String participantName = params.get("participantName");
-        log.info("{}, {}", roomName, participantName);
+public ResponseEntity<Map<String, String>> createToken(@RequestBody Map<String, String> params) {
+    String roomName = params.get("roomName");
+    String participantName = params.get("participantName");
+    log.info("{}, {}", roomName, participantName);
 
-        if (roomName == null || participantName == null) {
-            return ResponseEntity.badRequest().body(Map.of("errorMessage", "roomName and participantName are required"));
-        }
-
-        AccessToken token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
-        token.setName(participantName);
-        token.setIdentity(participantName);
-        token.addGrants(new RoomJoin(true), new RoomName(roomName));
-
-        return ResponseEntity.ok(Map.of("token", token.toJwt()));
+    if (roomName == null || participantName == null) {
+        return ResponseEntity.badRequest().body(Map.of("errorMessage", "roomName and participantName are required"));
     }
+
+    AccessToken token = new AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET);
+    token.setName(participantName);
+    token.setIdentity(participantName);
+    token.addGrants(new RoomJoin(true), new RoomName(roomName));
+
+    return ResponseEntity.ok(Map.of("token", token.toJwt()));
+}
 ```
