@@ -29,10 +29,6 @@
 | 최신순 | 최근 등록 순으로 정렬된 게시글 목록 |
 | 유저 목록 | 키워드와 연관된 사용자 목록 |
 
-### Redis 캐싱
- 
-동일한 조건의 추천 게시글 요청이 반복될 경우, DB 조회 없이 Redis에 저장된 결과를 즉시 반환하여 응답 속도를 개선합니다.
-
 ### 주요 코드
 
 **추천 게시글 조회 API** — 로그인한 사용자 기준으로 추천 게시글을 페이징하여 반환하며, S3에 저장된 이미지는 Presigned URL로 변환하여 제공합니다.
@@ -62,46 +58,6 @@ public ResponseEntity<?> getRecommends(@PathVariable int page,
     });
 
     return ResponseEntity.ok(posts);
-}
-```
-
-**Redis 캐싱 코드**
-```java
-@LogStatusWithReturn
-@Cacheable(
-        value = "post:list",
-        key = "'page:' + #page" + " + ':memberId:' + #memberId")
-public PostProductWithPagingDTO getRecommendProducts(int page, Long memberId) {
-    PostProductWithPagingDTO postProductWithPagingDTO = new PostProductWithPagingDTO();
-    Criteria criteria = new Criteria(page, postProductDAO.getTotal());
-
-    List<PostProductDTO> products = postProductDAO.findRecommendProducts(criteria, memberId).stream()
-            .map(productDTO -> {
-                List<PostFileDTO> images = new ArrayList<>(postFileDAO.findAllByPostId(productDTO.getId()));
-                if(!images.isEmpty()) {
-                    productDTO.setPostFiles(
-                            images.stream()
-                                    .map(PostFileDTO::getFilePath)
-                                    .collect(Collectors.toList())
-
-                    );
-                }
-                return productDTO;
-            }).collect(Collectors.toList());
-
-    criteria.setHasMore(products.size() > criteria.getRowCount());
-    postProductWithPagingDTO.setCriteria(criteria);
-
-    if(criteria.isHasMore()) {
-        products.remove(products.size() - 1);
-    }
-
-    products.forEach(product -> {
-        product.setCreatedDatetime(DateUtils.toRelativeTime(product.getCreatedDatetime()));
-    });
-    postProductWithPagingDTO.setPosts(products);
-
-    return postProductWithPagingDTO;
 }
 ```
 
