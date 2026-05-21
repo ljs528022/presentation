@@ -65,6 +65,46 @@ public ResponseEntity<?> getRecommends(@PathVariable int page,
 }
 ```
 
+**Redis 캐싱 코드**
+```java
+@LogStatusWithReturn
+@Cacheable(
+        value = "post:list",
+        key = "'page:' + #page" + " + ':memberId:' + #memberId")
+public PostProductWithPagingDTO getRecommendProducts(int page, Long memberId) {
+    PostProductWithPagingDTO postProductWithPagingDTO = new PostProductWithPagingDTO();
+    Criteria criteria = new Criteria(page, postProductDAO.getTotal());
+
+    List<PostProductDTO> products = postProductDAO.findRecommendProducts(criteria, memberId).stream()
+            .map(productDTO -> {
+                List<PostFileDTO> images = new ArrayList<>(postFileDAO.findAllByPostId(productDTO.getId()));
+                if(!images.isEmpty()) {
+                    productDTO.setPostFiles(
+                            images.stream()
+                                    .map(PostFileDTO::getFilePath)
+                                    .collect(Collectors.toList())
+
+                    );
+                }
+                return productDTO;
+            }).collect(Collectors.toList());
+
+    criteria.setHasMore(products.size() > criteria.getRowCount());
+    postProductWithPagingDTO.setCriteria(criteria);
+
+    if(criteria.isHasMore()) {
+        products.remove(products.size() - 1);
+    }
+
+    products.forEach(product -> {
+        product.setCreatedDatetime(DateUtils.toRelativeTime(product.getCreatedDatetime()));
+    });
+    postProductWithPagingDTO.setPosts(products);
+
+    return postProductWithPagingDTO;
+}
+```
+
 ---
 
 ## 2. 광고 페이지
